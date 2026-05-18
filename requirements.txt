@@ -1,0 +1,27 @@
+# Зависимости для установки
+
+# UI компоненты (Shadcn UI)
+@radix-ui/react-dialog
+@radix-ui/react-dropdown-menu
+@radix-ui/react-icons
+@radix-ui/react-label
+@radix-ui/react-select
+@radix-ui/react-slot
+class-variance-authority
+clsx
+tailwind-merge
+tailwindcss-animate
+
+# Управление состоянием
+zustand
+
+# Типизация
+@types/node
+@types/react
+@types/react-dom
+
+# Build tools
+autoprefixer
+postcss
+tailwindcss
+typescript

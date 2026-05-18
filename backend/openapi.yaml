@@ -1,0 +1,261 @@
+openapi: 3.0.3
+info:
+  title: Job Search Assistant API
+  version: "1.0.0"
+  description: API for Users, Jobs feed and SmartApply (DeepSeek integration)
+servers:
+  - url: http://localhost:8080
+paths:
+  /health:
+    get:
+      tags: [Health]
+      summary: Health check
+      responses:
+        '200':
+          description: OK
+  /users:
+    post:
+      tags: [Users]
+      summary: Create user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserCreate'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+  /login:
+    post:
+      tags: [Users]
+      summary: Login with email and password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: User logged in
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          description: Invalid credentials
+  /users/{id}:
+    get:
+      tags: [Users]
+      summary: Get user by id
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+    put:
+      tags: [Users]
+      summary: Update user preferences and base_resume
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                preferences:
+                  type: object
+                base_resume:
+                  type: object
+      responses:
+        '204':
+          description: No Content
+    delete:
+      tags: [Users]
+      summary: Delete user by id
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: No Content
+        '404':
+          description: Not Found
+  /jobs:
+    get:
+      tags: [Jobs]
+      summary: Get jobs feed
+      parameters:
+        - name: min_score
+          in: query
+          schema:
+            type: number
+        - name: source
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ProcessedJob'
+  /jobs/parse:
+    post:
+      tags: [Jobs]
+      summary: Trigger async job parsing via parser service
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ParseJobsRequest'
+      responses:
+        '200':
+          description: Parsing started
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ParseJobsResponse'
+        '502':
+          description: Parser service unreachable
+  /smart-apply:
+    post:
+      tags: [SmartApply]
+      summary: Generate application assets (cover letter etc.) using DeepSeek
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SmartApplyRequest'
+      responses:
+        '200':
+          description: Generation result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SmartApplyResponse'
+components:
+  schemas:
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+    UserCreate:
+      type: object
+      required: [name, email]
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+        preferences:
+          type: object
+        base_resume:
+          type: object
+    User:
+      allOf:
+        - $ref: '#/components/schemas/UserCreate'
+        - type: object
+          properties:
+            id:
+              type: string
+    ProcessedJob:
+      type: object
+      properties:
+        id:
+          type: string
+        raw_job_id:
+          type: integer
+        title:
+          type: string
+        source:
+          type: string
+        source_url:
+          type: string
+          description: Прямая ссылка на вакансию на сайте-источнике
+        relevance_score:
+          type: number
+        matched_skills:
+          type: array
+          items:
+            type: string
+        hard_skills:
+          type: array
+          items:
+            type: string
+        ai_recommendation:
+          type: string
+    ParseJobsRequest:
+      type: object
+      required: [query]
+      properties:
+        query:
+          type: string
+          description: Search query (e.g. golang, python developer)
+        sources:
+          type: array
+          items:
+            type: string
+            enum: [hh, headhunter, habr, habr-career]
+          description: Job sources to parse. Defaults to [hh, habr]
+    ParseJobsResponse:
+      type: object
+      properties:
+        status:
+          type: string
+        query:
+          type: string
+        sources:
+          type: array
+          items:
+            type: string
+    SmartApplyRequest:
+      type: object
+      required: [user_id, job_id]
+      properties:
+        user_id:
+          type: string
+        job_id:
+          type: string
+        tone:
+          type: string
+    SmartApplyResponse:
+      type: object
+      properties:
+        generated:
+          type: object
+        metadata:
+          type: object

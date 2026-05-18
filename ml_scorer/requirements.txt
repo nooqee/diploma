@@ -1,0 +1,5 @@
+kafka-python>=2.0.2
+psycopg2-binary>=2.9.6
+requests>=2.31.0
+sentence-transformers>=2.2.2
+torch>=2.0.0

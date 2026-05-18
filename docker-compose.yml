@@ -1,0 +1,145 @@
+# Docker Compose for development environment
+# Services:
+#  - postgres: PostgreSQL with pgvector extension (ankane/pgvector image)
+#  - zookeeper + kafka: Kafka cluster (bitnami images)
+#  - kafka-init: one-shot container that creates required topics
+
+services:
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.4.0
+    container_name: zookeeper
+    environment:
+      - ZOOKEEPER_CLIENT_PORT=2181
+      - ZOOKEEPER_TICK_TIME=2000
+    ports:
+      - 2181:2181
+    networks:
+      - backend
+
+  kafka:
+    image: confluentinc/cp-kafka:7.4.0
+    container_name: kafka
+    environment:
+      - KAFKA_BROKER_ID=1
+      - KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181
+      - KAFKA_LISTENERS=PLAINTEXT://0.0.0.0:9092
+      - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092
+      - KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT
+      - KAFKA_INTER_BROKER_LISTENER_NAME=PLAINTEXT
+    ports:
+      - 9092:9092
+    depends_on:
+      - zookeeper
+    healthcheck:
+      test: [ "CMD", "bash", "-lc", "kafka-broker-api-versions.sh --bootstrap-server kafka:9092 >/dev/null 2>&1 || exit 1" ]
+      interval: 10s
+      retries: 10
+    networks:
+      - backend
+
+  postgres:
+    image: ankane/pgvector:latest
+    container_name: postgres
+    environment:
+      - POSTGRES_USER=app
+      - POSTGRES_PASSWORD=changeme
+      - POSTGRES_DB=jobsdb
+    ports:
+      - 5433:5432
+    volumes:
+      - ./sql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD", "pg_isready", "-U", "app" ]
+      interval: 10s
+      retries: 5
+    networks:
+      - backend
+
+  kafka-init:
+    image: confluentinc/cp-kafka:7.4.0
+    container_name: kafka-init
+    depends_on:
+      - kafka
+    command: [ "/bin/bash", "-lc", "until echo > /dev/tcp/kafka/9092; do sleep 1; done; kafka-topics.sh --create --bootstrap-server kafka:9092 --replication-factor 1 --partitions 3 --topic raw_jobs_topic || true; kafka-topics.sh --create --bootstrap-server kafka:9092 --replication-factor 1 --partitions 3 --topic scored_jobs_topic || true; echo 'Kafka topics ensured.'" ]
+    restart: "no"
+    networks:
+      - backend
+
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: job-search-api
+    environment:
+      - DATABASE_URL=postgres://app:changeme@postgres:5432/jobsdb?sslmode=disable
+      - API_PORT=8080
+      - PARSER_URL=http://parser:8081
+    ports:
+      - 8080:8080
+    depends_on:
+      - postgres
+      - kafka
+    healthcheck:
+      test: [ "CMD", "wget", "-qO-", "http://localhost:8080/health" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    networks:
+      - backend
+
+  parser:
+    build:
+      context: ./backend
+      dockerfile: parser/Dockerfile
+    container_name: job-parser
+    environment:
+      - DATABASE_URL=postgres://app:changeme@postgres:5432/jobsdb?sslmode=disable
+      - KAFKA_BROKERS=kafka:9092
+      - PARSER_WORKERS=4
+      - HTTP_PROXIES=
+      - PARSER_PORT=8081
+      # Для парсинга через локальный Chrome раскомментируйте две строки ниже
+      # и запустите Chrome с флагом --remote-debugging-port=9222
+      # - USE_BROWSER=1
+      # - CHROME_WS_URL=ws://host.docker.internal:9222
+    depends_on:
+      - kafka
+      - postgres
+    healthcheck:
+      test: [ "CMD", "wget", "-qO-", "http://localhost:8081/health" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    networks:
+      - backend
+
+  # ml_scorer временно отключён — Docker Hub недоступен, сервис не нужен для тестирования парсера
+  # ml_scorer:
+  #   build:
+  #     context: ./ml_scorer
+  #     dockerfile: Dockerfile
+  #   container_name: ml-scorer
+  #   environment:
+  #     - KAFKA_BROKERS=kafka:9092
+  #     - RAW_TOPIC=raw_jobs_topic
+  #     - SCORED_TOPIC=scored_jobs_topic
+  #     - DATABASE_URL=postgres://app:changeme@postgres:5432/jobsdb
+  #     - EMBEDDING_DIM=384
+  #     - SKILLS_CSV=python,java,sql,aws,react
+  #     - EMBEDDER=local
+  #     - LOCAL_MODEL=all-MiniLM-L6-v2
+  #   depends_on:
+  #     - kafka
+  #     - postgres
+  #   networks:
+  #     - backend
+
+volumes:
+  pgdata:
+
+networks:
+  backend:
+    driver: bridge

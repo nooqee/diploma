@@ -1,0 +1,50 @@
+# See https://help.github.com/articles/ignoring/#gitignore
+#
+# User-specified ignore patterns can go here.
+#
+# If you want to include pattern for ignoring something, do not add "/" to the
+# pattern and because the pattern is never quoted here. Ex:
+#
+# .gitignore
+# ------>*.png
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Next.js
+.next/
+out/
+
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build
+*.log
+
+# Environment
+.env
+.env.local
+.env.*.local
+.env.example
+
+# TypeScript build info
+tsconfig.tsbuildinfo
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Local Postgres data
+pgdata/
