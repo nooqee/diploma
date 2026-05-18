@@ -17,6 +17,7 @@
 - **Инфраструктура** — PostgreSQL 15+ с pgvector, Kafka + Zookeeper.
 
 Пользовательский сценарий:
+
 1. Регистрация на лендинге (`/`)
 2. Настройка профиля и загрузка резюме (`/profile`)
 3. Просмотр умной ленты вакансий (`/jobs`)
@@ -27,6 +28,7 @@
 ## Технологический стек
 
 ### Фронтенд
+
 - **Next.js 14.2.0** (App Router, клиентские компоненты с `'use client'`)
 - **React 18.3**, **TypeScript 5.3** (strict mode)
 - **Tailwind CSS 3.4** + **tailwindcss-animate**
@@ -36,6 +38,7 @@
 - **clsx + tailwind-merge** — утилита `cn()` для условных классов
 
 ### Бэкенд (API + Парсер)
+
 - **Go 1.23**
 - **Fiber v2** — веб-фреймворк
 - **pgx/v5** — драйвер PostgreSQL с пулом соединений
@@ -45,6 +48,7 @@
 - **godotenv** — загрузка `.env`
 
 ### ML Scorer
+
 - **Python 3.11**
 - **kafka-python** — consumer
 - **psycopg2-binary** — PostgreSQL
@@ -52,6 +56,7 @@
 - Фолбэк: pseudo-embedding через SHA256
 
 ### База данных
+
 - **PostgreSQL** с расширением **pgvector**
 - Векторная размерность: **384** (под `all-MiniLM-L6-v2`)
 - Таблицы: `users_metadata`, `raw_jobs`, `processed_jobs`, `kafka_offsets`
@@ -115,6 +120,7 @@ scripts/
 ## Команды сборки и запуска
 
 ### Фронтенд (локально)
+
 ```bash
 npm install
 npm run dev      # localhost:3000
@@ -124,6 +130,7 @@ npm run lint     # линтинг
 ```
 
 ### Полный стек (Docker Compose)
+
 ```bash
 # Windows (PowerShell)
 .\scripts\start-stack.ps1
@@ -133,12 +140,14 @@ docker-compose up --build -d
 ```
 
 Сервисы после `docker-compose up`:
+
 - PostgreSQL: `localhost:5432`
 - Kafka: `localhost:9092`
 - API: `http://localhost:8080`
 - Swagger UI: `http://localhost:8080/docs`
 
 ### ML Scorer (локально, без Docker)
+
 ```bash
 .\scripts\setup-python-venv.ps1
 cd ml_scorer
@@ -147,7 +156,9 @@ python scorer.py
 ```
 
 ### Переменные окружения
+
 Пример в `.env.example`:
+
 ```
 DATABASE_URL=postgres://app:changeme@postgres:5432/jobsdb?sslmode=disable
 API_PORT=8080
@@ -179,11 +190,13 @@ DEEPSEEK_URL=http://deepseek:8000
 ## Соглашения по коду
 
 ### Язык
+
 - **Комментарии и документация** — русский.
 - **Код (переменные, функции, типы)** — английский.
 - **UI-тексты** — русский.
 
 ### TypeScript / React
+
 - **Strict mode** включён. Не используйте `any` без крайней необходимости.
 - **App Router** Next.js — страницы по умолчанию Server Components, но в проекте почти все помечены `'use client'` из-за использования hooks и Zustand.
 - **Path alias**: `@/` → `./src/`. Импортируйте через `@/components/ui/button`, `@/types` и т.д.
@@ -195,6 +208,7 @@ DEEPSEEK_URL=http://deepseek:8000
 - **Моковые данные** — `src/lib/mockData.ts`. Используются для демонстрации UI без бэкенда.
 
 ### Go
+
 - Модуль: `job-search-assistant`.
 - Код в `backend/internal/`: `db`, `handlers`, `models`.
 - Graceful shutdown через `signal.Notify` + `app.ShutdownWithContext`.
@@ -202,6 +216,7 @@ DEEPSEEK_URL=http://deepseek:8000
 - Парсер использует worker pool с exponential backoff и ротацией HTTP-прокси.
 
 ### Python
+
 - ML Scorer читает переменные окружения через `os.getenv` с дефолтами.
 - Поддерживаются три режима эмбеддингов: `local` (sentence-transformers), `openai`, `pseudo` (фолбэк).
 
@@ -212,11 +227,13 @@ DEEPSEEK_URL=http://deepseek:8000
 В проекте **нет формального тестового набора** (unit / integration / e2e тесты отсутствуют).
 
 Стратегия тестирования:
+
 1. **Моковые данные** (`src/lib/mockData.ts`) — позволяют проверить UI без запущенного бэкенда.
 2. **Ручное тестирование через Docker Compose** — скрипт `scripts/start-stack.ps1` поднимает весь стек и проверяет `/health`.
 3. **Swagger UI** (`http://localhost:8080/docs`) — для ручного тестирования API.
 
 Если вы добавляете тесты:
+
 - Фронтенд: используйте **Jest** + **React Testing Library** (уже знакомы по стеку в mockData).
 - Go: стандартный `testing` + `testify`.
 - Python: `pytest`.

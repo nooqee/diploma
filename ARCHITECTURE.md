@@ -298,7 +298,7 @@ interface AppState {
 
 ## 📡 API взаимодействия
 
-### Бэкенд endpoints (RESTful):
+### Бэкенд endpoints (RESTful)
 
 ```
 GET    /api/jobs              # Получить список вакансий

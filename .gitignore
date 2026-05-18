@@ -48,3 +48,6 @@ __pycache__/
 
 # Local Postgres data
 pgdata/
+
+#markdown
+*.md
